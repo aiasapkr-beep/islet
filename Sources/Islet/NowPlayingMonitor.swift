@@ -55,7 +55,7 @@ final class NowPlayingMonitor: ObservableObject {
 
     static var adapterPaths: AdapterPaths? {
         var dirs: [URL] = []
-        if let env = ProcessInfo.processInfo.environment["NOTCHUSAGE_ADAPTER_DIR"] {
+        if let env = ProcessInfo.processInfo.environment["ISLET_ADAPTER_DIR"] {
             dirs.append(URL(fileURLWithPath: env))
         }
         if let res = Bundle.main.resourceURL { dirs.append(res) }

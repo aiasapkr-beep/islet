@@ -39,10 +39,10 @@ final class UsageStore: ObservableObject {
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
-    /// NOTCHUSAGE_MOCK=1 shows sample data without touching the Keychain or network (for screenshots/dev).
-    static let mock = ProcessInfo.processInfo.environment["NOTCHUSAGE_MOCK"] == "1"
-    /// NOTCHUSAGE_MOCK_USAGE=1 mocks only the usage numbers; activity and music stay real.
-    static let mockUsageOnly = ProcessInfo.processInfo.environment["NOTCHUSAGE_MOCK_USAGE"] == "1"
+    /// ISLET_MOCK=1 shows sample data without touching the Keychain or network (for screenshots/dev).
+    static let mock = ProcessInfo.processInfo.environment["ISLET_MOCK"] == "1"
+    /// ISLET_MOCK_USAGE=1 mocks only the usage numbers; activity and music stay real.
+    static let mockUsageOnly = ProcessInfo.processInfo.environment["ISLET_MOCK_USAGE"] == "1"
 
     func start() {
         if Self.mock || Self.mockUsageOnly {

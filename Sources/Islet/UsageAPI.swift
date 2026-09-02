@@ -3,7 +3,7 @@ import Foundation
 /// GET https://api.anthropic.com/api/oauth/usage — the same endpoint Claude Code's `/usage` uses.
 enum UsageAPI {
     static let endpoint = URL(string: "https://api.anthropic.com/api/oauth/usage")!
-    static let userAgent = "NotchUsage/\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev") (macOS)"
+    static let userAgent = "Islet/\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev") (macOS)"
 
     enum Failure: LocalizedError {
         case unauthorized

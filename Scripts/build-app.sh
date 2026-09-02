@@ -1,13 +1,13 @@
 #!/bin/bash
-# Builds NotchUsage.app into ./build (release, ad-hoc signed).
+# Builds Islet.app into ./build (release, ad-hoc signed).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CONFIG="${1:-release}"
-APP="build/NotchUsage.app"
+APP="build/Islet.app"
 
 swift build -c "$CONFIG" 2>&1 | tail -n 3
-BIN=".build/$CONFIG/NotchUsage"
+BIN=".build/$CONFIG/Islet"
 
 # Now Playing helper (see Vendor/mediaremote-adapter/README.md). Built once, reused.
 ADAPTER=Vendor/mediaremote-adapter
@@ -17,7 +17,7 @@ fi
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/NotchUsage"
+cp "$BIN" "$APP/Contents/MacOS/Islet"
 cp Resources/Info.plist "$APP/Contents/"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 cp "$ADAPTER/bin/mediaremote-adapter.pl" "$APP/Contents/Resources/"

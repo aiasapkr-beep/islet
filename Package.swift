@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "NotchUsage",
+    name: "Islet",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "NotchUsage",
-            path: "Sources/NotchUsage",
+            name: "Islet",
+            path: "Sources/Islet",
             linkerSettings: [
                 .linkedFramework("Security"),
                 .linkedFramework("ServiceManagement"),

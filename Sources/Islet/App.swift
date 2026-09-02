@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct NotchUsageApp: App {
+struct IsletApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @ObservedObject private var store = UsageStore.shared
 
@@ -36,8 +36,8 @@ struct NotchUsageApp: App {
         Toggle("Auto-refresh Claude Token", isOn: $store.autoRefreshToken)
         Toggle("Launch at Login", isOn: $store.launchAtLogin)
         Divider()
-        Link("GitHub", destination: URL(string: "https://github.com/aiasapkr-beep/notch-usage")!)
-        Button("Quit NotchUsage") { NSApp.terminate(nil) }
+        Link("GitHub", destination: URL(string: "https://github.com/aiasapkr-beep/islet")!)
+        Button("Quit Islet") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 

@@ -1,6 +1,6 @@
-# NotchUsage
+# Islet
 
-Claude Code usage limits, right in your MacBook's notch.
+A small island around your MacBook's notch: Claude Code usage limits on both sides, Now Playing in the middle.
 
 Hover the notch to see your **5-hour session** and **weekly** utilization with reset timers. On Macs without a notch it hangs as a small island at the top of the screen, and there is always a menu bar item as well.
 
@@ -25,9 +25,9 @@ Hover the notch to see your **5-hour session** and **weekly** utilization with r
 ## Build & run
 
 ```bash
-git clone https://github.com/aiasapkr-beep/notch-usage.git
-cd notch-usage
-make run          # builds build/NotchUsage.app and opens it
+git clone https://github.com/aiasapkr-beep/islet.git
+cd islet
+make run          # builds build/Islet.app and opens it
 make install      # copies it to /Applications
 ```
 
@@ -43,22 +43,22 @@ The first launch asks for access to the **"Claude Code-credentials"** Keychain i
 
 ### Now Playing on macOS 15.4+
 
-Apple locked the private MediaRemote framework to entitled system binaries in 15.4. NotchUsage bundles [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) (BSD-3, vendored under `Vendor/`), which loads a small helper framework inside `/usr/bin/perl` and streams Now Playing JSON. The app reads that stream as a child process; the bars are procedural (macOS exposes no audio levels). If Apple breaks the adapter, music quietly disappears and usage keeps working.
+Apple locked the private MediaRemote framework to entitled system binaries in 15.4. Islet bundles [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) (BSD-3, vendored under `Vendor/`), which loads a small helper framework inside `/usr/bin/perl` and streams Now Playing JSON. The app reads that stream as a child process; the bars are procedural (macOS exposes no audio levels). If Apple breaks the adapter, music quietly disappears and usage keeps working.
 
 Environment flags for development:
 
 | Flag | Effect |
 |---|---|
-| `NOTCHUSAGE_DEBUG=1` | Echo logs to stderr (also visible in Console.app under subsystem `io.github.minsueh.NotchUsage`). |
-| `NOTCHUSAGE_MOCK=1` | Show sample data (usage, activity, music); no Keychain or network access. |
-| `NOTCHUSAGE_MOCK_USAGE=1` | Mock only the usage numbers; activity pulse and Now Playing stay real. |
-| `NOTCHUSAGE_ADAPTER_DIR` | Directory holding `mediaremote-adapter.pl` + `MediaRemoteAdapter.framework` when running the bare binary. |
-| `NOTCHUSAGE_EXPANDED=1` | Start with the island expanded (for screenshots). |
+| `ISLET_DEBUG=1` | Echo logs to stderr (also visible in Console.app under subsystem `kr.asapai.Islet`). |
+| `ISLET_MOCK=1` | Show sample data (usage, activity, music); no Keychain or network access. |
+| `ISLET_MOCK_USAGE=1` | Mock only the usage numbers; activity pulse and Now Playing stay real. |
+| `ISLET_ADAPTER_DIR` | Directory holding `mediaremote-adapter.pl` + `MediaRemoteAdapter.framework` when running the bare binary. |
+| `ISLET_EXPANDED=1` | Start with the island expanded (for screenshots). |
 
 ## Troubleshooting
 
 - **Menu bar shows `!`** – open the menu to read the error. Most common: the token *and* its refresh token are expired. Run `claude` in Terminal and `/login` once; the app picks it up on the next poll.
-- **`Keychain error`** – you denied the Keychain prompt. Quit the app, open Keychain Access, find "Claude Code-credentials" → Access Control, and add NotchUsage, or just relaunch and click Always Allow.
+- **`Keychain error`** – you denied the Keychain prompt. Quit the app, open Keychain Access, find "Claude Code-credentials" → Access Control, and add Islet, or just relaunch and click Always Allow.
 - **No music shows up** – make sure the player publishes to Now Playing (the macOS Control Center media widget shows it). Run `/usr/bin/perl Vendor/mediaremote-adapter/bin/mediaremote-adapter.pl "$PWD/Vendor/mediaremote-adapter/build/MediaRemoteAdapter.framework" get --no-artwork` to test the adapter directly.
 - **Rebuilt the app and the prompt is back** – ad-hoc signatures change with every build. Sign with your own Developer ID in `Scripts/build-app.sh` if that bothers you.
 - **Island overlaps a menu bar icon** – it extends about 100pt on each side of the notch. Turn it off with "Show in Notch" and rely on the menu bar item, or shrink `sideWidth` in `NotchView.swift`.
@@ -75,7 +75,7 @@ MIT
 
 ## 한국어
 
-맥북 노치에서 Claude Code의 **5시간 세션**과 **주간** 사용량을 바로 보는 메뉴바 앱입니다. 노치에 마우스를 올리면 리셋까지 남은 시간과 함께 펼쳐집니다. 노치 없는 맥에서는 화면 상단 중앙에 작은 아일랜드로 붙고, 메뉴바 아이템은 항상 있습니다.
+맥북 노치 주변에 붙는 작은 섬입니다. 양옆에 Claude Code의 **5시간 세션**과 **주간** 사용량, 가운데에 지금 재생 중인 음악을 보여줍니다. 노치에 마우스를 올리면 리셋까지 남은 시간과 함께 펼쳐집니다. 노치 없는 맥에서는 화면 상단 중앙에 작은 아일랜드로 붙고, 메뉴바 아이템은 항상 있습니다.
 
 - Claude Code의 `/usage`와 같은 엔드포인트를 그대로 읽습니다. 별도 API 키나 추가 비용이 없습니다.
 - 맥에 이미 로그인된 Claude Code 자격증명(키체인)을 재사용하고, 만료되면 Claude Code와 같은 방식으로 토큰을 갱신해 다시 저장합니다. 메뉴에서 끌 수 있습니다.
@@ -88,8 +88,8 @@ MIT
 ### 빌드
 
 ```bash
-git clone https://github.com/aiasapkr-beep/notch-usage.git
-cd notch-usage
+git clone https://github.com/aiasapkr-beep/islet.git
+cd islet
 make run
 ```
 
@@ -98,5 +98,5 @@ make run
 ### 문제 해결
 
 - **메뉴바에 `!`** 메뉴를 열면 오류 메시지가 보입니다. 대개 토큰과 갱신 토큰이 모두 만료된 경우이므로 터미널에서 `claude`를 실행해 `/login`을 한 번 하면 됩니다.
-- **키체인 오류** 접근을 거부한 경우입니다. 앱을 다시 열고 항상 허용을 누르거나, 키체인 접근 앱에서 "Claude Code-credentials" 항목의 접근 제어에 NotchUsage를 추가하세요.
+- **키체인 오류** 접근을 거부한 경우입니다. 앱을 다시 열고 항상 허용을 누르거나, 키체인 접근 앱에서 "Claude Code-credentials" 항목의 접근 제어에 Islet를 추가하세요.
 - **메뉴바 아이콘과 겹침** 노치 양옆으로 100pt 정도씩 뻗습니다. "Show in Notch"를 끄거나 `NotchView.swift`의 `sideWidth`를 줄이세요.

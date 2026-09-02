@@ -8,7 +8,7 @@ struct NotchView: View {
     @ObservedObject private var music = NowPlayingMonitor.shared
     let geometry: NotchGeometry
 
-    @State private var hovering = ProcessInfo.processInfo.environment["NOTCHUSAGE_EXPANDED"] == "1"
+    @State private var hovering = ProcessInfo.processInfo.environment["ISLET_EXPANDED"] == "1"
     @State private var collapseTask: Task<Void, Never>?
 
     private let sideWidth: CGFloat = 88     // gauge
