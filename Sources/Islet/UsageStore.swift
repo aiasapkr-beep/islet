@@ -19,6 +19,7 @@ final class UsageStore: ObservableObject {
     @Published var showNotch: Bool { didSet { defaults.set(showNotch, forKey: "showNotch") } }
     @Published var autoRefreshToken: Bool { didSet { defaults.set(autoRefreshToken, forKey: "autoRefreshToken") } }
     @Published var showMenuBarText: Bool { didSet { defaults.set(showMenuBarText, forKey: "showMenuBarText") } }
+    @Published var showMenuBarIcon: Bool { didSet { defaults.set(showMenuBarIcon, forKey: "showMenuBarIcon") } }
     @Published var showNowPlaying: Bool { didSet { defaults.set(showNowPlaying, forKey: "showNowPlaying") } }
     @Published var launchAtLogin: Bool {
         didSet { if launchAtLogin != oldValue { applyLaunchAtLogin() } }
@@ -31,10 +32,11 @@ final class UsageStore: ObservableObject {
     private var inFlight = false
 
     private init() {
-        defaults.register(defaults: ["showNotch": true, "autoRefreshToken": true, "showMenuBarText": true, "showNowPlaying": true])
+        defaults.register(defaults: ["showNotch": true, "autoRefreshToken": true, "showMenuBarText": false, "showMenuBarIcon": true, "showNowPlaying": true])
         showNotch = defaults.bool(forKey: "showNotch")
         autoRefreshToken = defaults.bool(forKey: "autoRefreshToken")
         showMenuBarText = defaults.bool(forKey: "showMenuBarText")
+        showMenuBarIcon = defaults.bool(forKey: "showMenuBarIcon")
         showNowPlaying = defaults.bool(forKey: "showNowPlaying")
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }

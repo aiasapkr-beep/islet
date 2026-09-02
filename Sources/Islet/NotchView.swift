@@ -41,6 +41,7 @@ struct NotchView: View {
                 .shadow(color: .black.opacity(hovering ? 0.45 : 0), radius: 14, y: 6)
         )
         .contentShape(Rectangle())
+        .contextMenu { IsletMenu() }
         .onHover { over in
             collapseTask?.cancel()
             if over {

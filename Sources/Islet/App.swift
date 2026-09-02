@@ -7,8 +7,8 @@ struct IsletApp: App {
     @ObservedObject private var store = UsageStore.shared
 
     var body: some Scene {
-        MenuBarExtra {
-            menu
+        MenuBarExtra(isInserted: $store.showMenuBarIcon) {
+            IsletMenu()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "gauge.with.dots.needle.33percent")
@@ -16,8 +16,13 @@ struct IsletApp: App {
             }
         }
     }
+}
 
-    @ViewBuilder private var menu: some View {
+/// Shared between the menu bar item and the island's right-click menu.
+struct IsletMenu: View {
+    @ObservedObject private var store = UsageStore.shared
+
+    var body: some View {
         if let u = store.usage {
             Text("5-hour: \(u.fiveHour?.percentText ?? "–")" + resetSuffix(u.fiveHour))
             Text("Weekly: \(u.sevenDay?.percentText ?? "–")" + resetSuffix(u.sevenDay))
@@ -31,8 +36,9 @@ struct IsletApp: App {
             .keyboardShortcut("r")
         Divider()
         Toggle("Show in Notch", isOn: $store.showNotch)
-        Toggle("Show % in Menu Bar", isOn: $store.showMenuBarText)
         Toggle("Now Playing Island", isOn: $store.showNowPlaying)
+        Toggle("Menu Bar Icon", isOn: $store.showMenuBarIcon)
+        Toggle("Show % in Menu Bar", isOn: $store.showMenuBarText)
         Toggle("Auto-refresh Claude Token", isOn: $store.autoRefreshToken)
         Toggle("Launch at Login", isOn: $store.launchAtLogin)
         Divider()

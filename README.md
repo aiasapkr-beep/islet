@@ -14,7 +14,7 @@ Hover the notch to see your **5-hour session** and **weekly** utilization with r
 - A small green dot beside the notch pulses while Claude Code is writing a transcript (FSEvents on `~/.claude/projects`); the expanded footer shows whether sessions are working, idle, or absent.
 - **Now Playing island**: album art on the left of the notch, equalizer bars on the right while music plays. Hover for title, artist, progress, and previous/play-pause/next. Works with anything that publishes to macOS Now Playing (YouTube Music as a Chrome app, Spotify, Apple Music, Safari…). Toggle off in the menu.
 - Polls once a minute, backs off on `429`.
-- Launch at login, show/hide notch island, show/hide % in the menu bar.
+- Launch at login, show/hide the notch island, hide the menu bar icon entirely (right-click the island for the same menu).
 
 ## Requirements
 
@@ -62,7 +62,8 @@ Environment flags for development:
 - **`Keychain error`** – you denied the Keychain prompt. Quit the app, open Keychain Access, find "Claude Code-credentials" → Access Control, and add Islet, or just relaunch and click Always Allow.
 - **No music shows up** – make sure the player publishes to Now Playing (the macOS Control Center media widget shows it). Run `/usr/bin/perl Vendor/mediaremote-adapter/bin/mediaremote-adapter.pl "$PWD/Vendor/mediaremote-adapter/build/MediaRemoteAdapter.framework" get --no-artwork` to test the adapter directly.
 - **Rebuilt the app and the prompt is back** – ad-hoc signatures change with every build. Sign with your own Developer ID in `Scripts/build-app.sh` if that bothers you.
-- **Island overlaps a menu bar icon** – it extends about 100pt on each side of the notch. Turn it off with "Show in Notch" and rely on the menu bar item, or shrink `sideWidth` in `NotchView.swift`.
+- **Island overlaps a menu bar icon** – it extends about 130pt on each side of the notch. Turn it off with "Show in Notch" and rely on the menu bar item, or shrink `sideWidth` in `NotchView.swift`.
+- **Something peeks out beside the notch** – with many status items macOS pushes them behind the notch, and Islet's own menu bar item can end up there. Turn off "Show % in Menu Bar" (default) or "Menu Bar Icon"; right-click the island to get the menu back.
 
 ## Privacy
 
@@ -84,7 +85,7 @@ MIT
 - Claude Code가 대화 기록을 쓰는 동안 노치 옆 초록 점이 맥박처럼 뜁니다(`~/.claude/projects` 파일 이벤트). 펼치면 세션이 작업 중인지, 대기 중인지, 없는지 하단에 표시.
 - **Now Playing 아일랜드**: 음악이 재생되면 노치 왼쪽에 앨범아트, 오른쪽에 이퀄라이저 바가 뜹니다. 펼치면 제목·아티스트·진행바·이전/재생·정지/다음 버튼. macOS Now Playing에 올라오는 앱은 전부 지원(YouTube Music 크롬 앱, Spotify, Apple Music, Safari 등). 메뉴에서 끌 수 있습니다.
 - 1분마다 갱신, `429`면 대기.
-- 로그인 시 실행, 노치 표시 켜고 끄기, 메뉴바 % 표시 켜고 끄기.
+- 로그인 시 실행, 노치 표시 켜고 끄기, 메뉴바 아이콘 완전히 숨기기(설정 메뉴는 섬을 우클릭해도 나옵니다).
 
 ### 빌드
 
