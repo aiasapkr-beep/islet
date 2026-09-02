@@ -60,13 +60,14 @@ final class ActivityMonitor: ObservableObject {
             guard let info else { return }
             let monitor = Unmanaged<ActivityMonitor>.fromOpaque(info).takeUnretainedValue()
             // Only transcript files count; ignore directory chatter.
-            let list = unsafeBitCast(paths, to: NSArray.self)
+            // With kFSEventStreamCreateFlagUseCFTypes the paths argument is a CFArray of CFString.
+            let list = unsafeBitCast(paths, to: CFArray.self) as NSArray
             let hit = (0..<count).contains { (list[$0] as? String)?.hasSuffix(".jsonl") ?? false }
             if hit { Task { @MainActor in monitor.touch() } }
         }
         guard let s = FSEventStreamCreate(nil, callback, &ctx, [path] as CFArray,
                                           FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 1.0,
-                                          FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer)) else {
+                                          FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagUseCFTypes)) else {
             Log.error("FSEventStreamCreate failed")
             return
         }
