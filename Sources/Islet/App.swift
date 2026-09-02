@@ -62,6 +62,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         let store = UsageStore.shared
+        if ProcessInfo.processInfo.environment["ISLET_SELFTEST"] == "1" {
+            Task {
+                await store.refreshNow(force: true)
+                let line = store.usage.map { "SELFTEST usage 5h=\($0.fiveHour?.percentText ?? "-") 7d=\($0.sevenDay?.percentText ?? "-")" }
+                    ?? "SELFTEST no usage: \(store.errorMessage ?? "unknown")"
+                FileHandle.standardError.write(Data((line + "\n").utf8))
+                NSApp.terminate(nil)
+            }
+            return
+        }
         store.start()
         ActivityMonitor.shared.start()
         rebuildPanel()

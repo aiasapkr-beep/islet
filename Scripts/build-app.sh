@@ -24,6 +24,12 @@ cp "$ADAPTER/bin/mediaremote-adapter.pl" "$APP/Contents/Resources/"
 cp -R "$ADAPTER/build/MediaRemoteAdapter.framework" "$APP/Contents/Resources/"
 echo -n "APPL????" > "$APP/Contents/PkgInfo"
 
-# Ad-hoc signature so Keychain access is tied to a stable identity for this build.
-codesign --force --deep --sign - "$APP"
-echo "Built $APP"
+# Signing: use $ISLET_SIGN_IDENTITY, else a local "Islet Dev" certificate if one exists,
+# else ad-hoc. A stable identity keeps the Keychain "Always Allow" grant across rebuilds
+# (ad-hoc signatures change every build, so macOS asks again each time).
+IDENTITY="${ISLET_SIGN_IDENTITY:-}"
+if [ -z "$IDENTITY" ] && security find-identity -p codesigning 2>/dev/null | grep -q '"Islet Dev"'; then
+  IDENTITY="Islet Dev"
+fi
+codesign --force --deep --sign "${IDENTITY:--}" "$APP"
+echo "Built $APP (signed: ${IDENTITY:-ad-hoc})"

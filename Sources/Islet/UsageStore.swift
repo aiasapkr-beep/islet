@@ -91,7 +91,10 @@ final class UsageStore: ObservableObject {
         defer { inFlight = false; isLoading = false }
 
         do {
+            Log.info("loading credentials…")
+            let t0 = Date()
             var (creds, source) = try await Task.detached(priority: .userInitiated) { try CredentialStore.load() }.value
+            Log.info("credentials loaded in \(String(format: "%.1f", Date().timeIntervalSince(t0)))s")
             plan = creds.subscriptionType
             sourceName = source.description
             var refreshed = false
