@@ -5,6 +5,7 @@ import AppKit
 struct IsletApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @ObservedObject private var store = UsageStore.shared
+    @ObservedObject private var reminders = RemindersMonitor.shared
 
     var body: some Scene {
         MenuBarExtra {
@@ -33,6 +34,13 @@ struct IsletApp: App {
         Toggle("Show in Notch", isOn: $store.showNotch)
         Toggle("Show % in Menu Bar", isOn: $store.showMenuBarText)
         Toggle("Now Playing Island", isOn: $store.showNowPlaying)
+        Toggle("Reminders in Island", isOn: $store.showReminders)
+        if store.showReminders && reminders.status == .authorized {
+            Picker("Reminders List", selection: $reminders.selectedListID) {
+                Text("All Lists").tag(String?.none)
+                ForEach(reminders.lists) { l in Text(l.title).tag(String?.some(l.id)) }
+            }
+        }
         Toggle("Auto-refresh Claude Token", isOn: $store.autoRefreshToken)
         Toggle("Launch at Login", isOn: $store.launchAtLogin)
         Divider()
@@ -73,6 +81,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if on { NowPlayingMonitor.shared.start() } else { NowPlayingMonitor.shared.stop() }
             }
             observers.append(music)
+
+            let rem = store.$showReminders.removeDuplicates().receive(on: RunLoop.main).sink { on in
+                if on { RemindersMonitor.shared.start() } else { RemindersMonitor.shared.stop() }
+            }
+            observers.append(rem)
         }
     }
 
