@@ -78,6 +78,7 @@ final class RemindersMonitor: ObservableObject {
             Task {
                 do {
                     let ok = try await store.requestFullAccessToReminders()
+                    Log.info("reminders access request finished: granted=\(ok), status=\(EKEventStore.authorizationStatus(for: .reminder).rawValue)")
                     status = ok ? .authorized : .denied
                     if ok { begin() }
                 } catch {
