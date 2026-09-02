@@ -11,7 +11,6 @@ Hover the notch to see your **5-hour session** and **weekly** utilization with r
 - No API key, no extra cost. It reuses the Claude Code login already on your Mac.
 - Auto-refreshes the OAuth token when it expires (same flow Claude Code uses) and writes it back so `claude` keeps working too. Can be turned off in the menu.
 - Reset countdown next to each gauge, even when collapsed.
-- A small green dot beside the notch pulses while Claude Code is writing a transcript (FSEvents on `~/.claude/projects`); the expanded footer shows whether sessions are working, idle, or absent.
 - **Now Playing island**: album art on the left of the notch, equalizer bars on the right while music plays. Hover for title, artist, progress, and previous/play-pause/next. Works with anything that publishes to macOS Now Playing (YouTube Music as a Chrome app, Spotify, Apple Music, Safari…). Toggle off in the menu.
 - Polls once a minute, backs off on `429`.
 - Launch at login, show/hide the notch island, hide the menu bar icon entirely (right-click the island for the same menu).
@@ -82,7 +81,6 @@ MIT
 - Claude Code의 `/usage`와 같은 엔드포인트를 그대로 읽습니다. 별도 API 키나 추가 비용이 없습니다.
 - 맥에 이미 로그인된 Claude Code 자격증명(키체인)을 재사용하고, 만료되면 Claude Code와 같은 방식으로 토큰을 갱신해 다시 저장합니다. 메뉴에서 끌 수 있습니다.
 - 접힌 상태에서도 게이지 옆에 리셋까지 남은 시간 표시.
-- Claude Code가 대화 기록을 쓰는 동안 노치 옆 초록 점이 맥박처럼 뜁니다(`~/.claude/projects` 파일 이벤트). 펼치면 세션이 작업 중인지, 대기 중인지, 없는지 하단에 표시.
 - **Now Playing 아일랜드**: 음악이 재생되면 노치 왼쪽에 앨범아트, 오른쪽에 이퀄라이저 바가 뜹니다. 펼치면 제목·아티스트·진행바·이전/재생·정지/다음 버튼. macOS Now Playing에 올라오는 앱은 전부 지원(YouTube Music 크롬 앱, Spotify, Apple Music, Safari 등). 메뉴에서 끌 수 있습니다.
 - 1분마다 갱신, `429`면 대기.
 - 로그인 시 실행, 노치 표시 켜고 끄기, 메뉴바 아이콘 완전히 숨기기(설정 메뉴는 섬을 우클릭해도 나옵니다).

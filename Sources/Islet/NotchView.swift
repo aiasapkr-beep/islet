@@ -4,7 +4,6 @@ import SwiftUI
 /// hovered it drops down to show both windows with reset timers.
 struct NotchView: View {
     @EnvironmentObject var store: UsageStore
-    @ObservedObject private var activity = ActivityMonitor.shared
     @ObservedObject private var music = NowPlayingMonitor.shared
     let geometry: NotchGeometry
 
@@ -73,10 +72,9 @@ struct NotchView: View {
         }
     }
 
-    /// Claude activity pulse + album art, hugging the left edge of the notch.
+    /// Album art, hugging the left edge of the notch.
     private var leftStrip: some View {
         HStack(spacing: 6) {
-            ActivityDot(active: activity.isActive)
             if let m = music.current {
                 Artwork(image: m.artwork, size: 20, radius: 5)
                     .transition(.scale.combined(with: .opacity))
@@ -131,12 +129,6 @@ struct NotchView: View {
         HStack(spacing: 8) {
             Text(store.planText)
             if let src = store.sourceName { Text("·").opacity(0.4); Text(src) }
-            Text("·").opacity(0.4)
-            HStack(spacing: 4) {
-                Circle().fill(activity.isActive ? Color(red: 0.20, green: 0.78, blue: 0.35) : .white.opacity(0.25))
-                    .frame(width: 6, height: 6)
-                Text(activity.isActive ? "working" : (activity.runningSessions > 0 ? "\(activity.runningSessions) idle" : "no session"))
-            }
             Spacer()
             if let t = store.lastUpdated {
                 TimelineView(.periodic(from: .now, by: 30)) { ctx in
@@ -318,25 +310,6 @@ struct NowPlayingRow: View {
     private func mmss(_ s: Double) -> String {
         let v = max(0, Int(s))
         return String(format: "%d:%02d", v / 60, v % 60)
-    }
-}
-
-/// Small dot beside the notch that breathes while Claude Code is writing a transcript.
-struct ActivityDot: View {
-    let active: Bool
-    @State private var pulse = false
-
-    var body: some View {
-        Circle()
-            .fill(Color(red: 0.20, green: 0.78, blue: 0.35))
-            .frame(width: 6, height: 6)
-            .scaleEffect(pulse ? 1.25 : 0.75)
-            .opacity(active ? (pulse ? 1 : 0.45) : 0)
-            .shadow(color: Color(red: 0.20, green: 0.78, blue: 0.35).opacity(pulse ? 0.8 : 0), radius: 4)
-            .animation(active ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true) : .default, value: pulse)
-            .animation(.easeOut(duration: 0.3), value: active)
-            .onAppear { pulse = true }
-            .frame(width: 10, height: 10)
     }
 }
 

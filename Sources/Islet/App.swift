@@ -71,7 +71,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         let store = UsageStore.shared
         store.start()
-        ActivityMonitor.shared.start()
         rebuildPanel()
         snapshotIfRequested()
 

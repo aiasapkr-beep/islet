@@ -53,8 +53,6 @@ final class UsageStore: ObservableObject {
                           sevenDayOpus: UsageWindow(utilization: 18, resetsAt: Date().addingTimeInterval(3 * 86400 + 4 * 3600)))
             plan = "max"; sourceName = "mock"; lastUpdated = Date()
             if Self.mock {
-                ActivityMonitor.shared.activeWindow = 3600
-                ActivityMonitor.shared.touch()
                 NowPlayingMonitor.shared.installMock()
             }
             return
