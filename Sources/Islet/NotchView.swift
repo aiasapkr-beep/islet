@@ -6,19 +6,15 @@ struct NotchView: View {
     @EnvironmentObject var store: UsageStore
     @ObservedObject private var activity = ActivityMonitor.shared
     @ObservedObject private var music = NowPlayingMonitor.shared
-    @ObservedObject private var reminders = RemindersMonitor.shared
     let geometry: NotchGeometry
 
     @State private var hovering = ProcessInfo.processInfo.environment["ISLET_EXPANDED"] == "1"
     @State private var collapseTask: Task<Void, Never>?
 
     private let sideWidth: CGFloat = 88     // gauge
-    private let stripWidth: CGFloat = 44    // island strip between gauge and notch
+    private let stripWidth: CGFloat = 48    // island strip between gauge and notch
     private let expandedWidth: CGFloat = 440
-    private let focusWidth: CGFloat = 124   // one reminder title beside the notch
-    private var focusItem: RemindersMonitor.Item? { reminders.items.first }
-    private var leftStripWidth: CGFloat { stripWidth + (focusItem == nil ? 0 : focusWidth) }
-    private var collapsedWidth: CGFloat { geometry.notchWidth + sideWidth * 2 + leftStripWidth + stripWidth }
+    private var collapsedWidth: CGFloat { geometry.notchWidth + (sideWidth + stripWidth) * 2 }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -67,7 +63,7 @@ struct NotchView: View {
             MiniGauge(label: "5H", window: store.usage?.fiveHour, error: failed)
                 .frame(width: sideWidth)
             leftStrip
-                .frame(width: leftStripWidth, alignment: .trailing)
+                .frame(width: stripWidth, alignment: .trailing)
             Spacer(minLength: geometry.notchWidth)
             rightStrip
                 .frame(width: stripWidth, alignment: .leading)
@@ -84,16 +80,9 @@ struct NotchView: View {
                 Artwork(image: m.artwork, size: 20, radius: 5)
                     .transition(.scale.combined(with: .opacity))
             }
-            if let f = focusItem {
-                FocusTask(item: f, fading: reminders.completing.contains(f.id)) { reminders.complete(f) }
-                    .frame(width: focusWidth - 6, alignment: .leading)
-                    .id(f.id)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
         }
-        .padding(.trailing, 6)
+        .padding(.trailing, 10)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: music.current?.itemID)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: focusItem?.id)
     }
 
     /// Equalizer bars on the right edge of the notch while something is playing.
@@ -104,7 +93,7 @@ struct NotchView: View {
                     .transition(.opacity)
             }
         }
-        .padding(.leading, 6)
+        .padding(.leading, 10)
         .animation(.easeOut(duration: 0.3), value: music.current != nil)
     }
 
@@ -129,10 +118,6 @@ struct NotchView: View {
             if let m = music.current {
                 Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1)
                 NowPlayingRow(item: m, monitor: music)
-            }
-            if store.showReminders && reminders.status != .unknown {
-                Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1)
-                RemindersSection(monitor: reminders)
             }
             footer
         }
@@ -332,124 +317,6 @@ struct NowPlayingRow: View {
     private func mmss(_ s: Double) -> String {
         let v = max(0, Int(s))
         return String(format: "%d:%02d", v / 60, v % 60)
-    }
-}
-
-/// The single most urgent reminder, shown collapsed beside the notch.
-struct FocusTask: View {
-    let item: RemindersMonitor.Item
-    let fading: Bool
-    let complete: () -> Void
-
-    var body: some View {
-        HStack(spacing: 6) {
-            CheckCircle(done: fading, action: complete)
-            VStack(alignment: .leading, spacing: -1) {
-                if let d = item.dueText {
-                    Text(d)
-                        .font(.system(size: 7.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(item.isOverdue ? Color(red: 1, green: 0.35, blue: 0.3) : .white.opacity(0.5))
-                        .lineLimit(1)
-                }
-                Text(item.title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(fading ? 0.35 : 0.9))
-                    .strikethrough(fading, color: .white.opacity(0.5))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-        }
-        .opacity(fading ? 0.5 : 1)
-        .animation(.easeOut(duration: 0.25), value: fading)
-    }
-}
-
-struct CheckCircle: View {
-    let done: Bool
-    let action: () -> Void
-    @State private var hover = false
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle().stroke(Color.white.opacity(hover || done ? 0.9 : 0.45), lineWidth: 1.5)
-                if done {
-                    Circle().fill(Color(red: 0.20, green: 0.78, blue: 0.35))
-                    Image(systemName: "checkmark").font(.system(size: 7, weight: .bold)).foregroundStyle(.black)
-                }
-            }
-            .frame(width: 13, height: 13)
-            .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hover = $0 }
-    }
-}
-
-struct RemindersSection: View {
-    @ObservedObject var monitor: RemindersMonitor
-    @State private var draft = ""
-    private let maxRows = 5
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Text("Reminders").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.6))
-                Spacer()
-                Text(monitor.selectedListName).font(.system(size: 10)).foregroundStyle(.white.opacity(0.35))
-            }
-            switch monitor.status {
-            case .denied:
-                Text("Reminders access is off. Allow Islet in System Settings → Privacy & Security → Reminders.")
-                    .font(.system(size: 11)).foregroundStyle(Color(red: 1, green: 0.62, blue: 0.04))
-                    .fixedSize(horizontal: false, vertical: true)
-            case .notDetermined:
-                Text("Waiting for Reminders permission…").font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-            default:
-                if monitor.items.isEmpty {
-                    Text("All clear.").font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
-                }
-                ForEach(monitor.items.prefix(maxRows)) { item in
-                    row(item)
-                }
-                if monitor.items.count > maxRows {
-                    Text("+\(monitor.items.count - maxRows) more").font(.system(size: 10)).foregroundStyle(.white.opacity(0.35))
-                }
-                HStack(spacing: 6) {
-                    Image(systemName: "plus").font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.4))
-                    TextField("Add a reminder…", text: $draft)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(.white)
-                        .onSubmit {
-                            monitor.add(draft)
-                            draft = ""
-                        }
-                }
-                .padding(.top, 2)
-            }
-        }
-        .animation(.easeOut(duration: 0.25), value: monitor.items)
-    }
-
-    private func row(_ item: RemindersMonitor.Item) -> some View {
-        let fading = monitor.completing.contains(item.id)
-        return HStack(spacing: 8) {
-            CheckCircle(done: fading) { monitor.complete(item) }
-            Text(item.title)
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(fading ? 0.35 : 0.9))
-                .strikethrough(fading, color: .white.opacity(0.5))
-                .lineLimit(1)
-            Spacer()
-            if let d = item.dueText {
-                Text(d)
-                    .font(.system(size: 10, weight: .medium)).monospacedDigit()
-                    .foregroundStyle(item.isOverdue ? Color(red: 1, green: 0.35, blue: 0.3)
-                                     : item.isToday ? Color(red: 1, green: 0.62, blue: 0.04) : .white.opacity(0.4))
-            }
-        }
-        .opacity(fading ? 0.5 : 1)
     }
 }
 

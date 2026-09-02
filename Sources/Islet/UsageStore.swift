@@ -20,7 +20,6 @@ final class UsageStore: ObservableObject {
     @Published var autoRefreshToken: Bool { didSet { defaults.set(autoRefreshToken, forKey: "autoRefreshToken") } }
     @Published var showMenuBarText: Bool { didSet { defaults.set(showMenuBarText, forKey: "showMenuBarText") } }
     @Published var showNowPlaying: Bool { didSet { defaults.set(showNowPlaying, forKey: "showNowPlaying") } }
-    @Published var showReminders: Bool { didSet { defaults.set(showReminders, forKey: "showReminders") } }
     @Published var launchAtLogin: Bool {
         didSet { if launchAtLogin != oldValue { applyLaunchAtLogin() } }
     }
@@ -32,12 +31,11 @@ final class UsageStore: ObservableObject {
     private var inFlight = false
 
     private init() {
-        defaults.register(defaults: ["showNotch": true, "autoRefreshToken": true, "showMenuBarText": true, "showNowPlaying": true, "showReminders": true])
+        defaults.register(defaults: ["showNotch": true, "autoRefreshToken": true, "showMenuBarText": true, "showNowPlaying": true])
         showNotch = defaults.bool(forKey: "showNotch")
         autoRefreshToken = defaults.bool(forKey: "autoRefreshToken")
         showMenuBarText = defaults.bool(forKey: "showMenuBarText")
         showNowPlaying = defaults.bool(forKey: "showNowPlaying")
-        showReminders = defaults.bool(forKey: "showReminders")
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
@@ -56,7 +54,6 @@ final class UsageStore: ObservableObject {
                 ActivityMonitor.shared.activeWindow = 3600
                 ActivityMonitor.shared.touch()
                 NowPlayingMonitor.shared.installMock()
-                RemindersMonitor.shared.installMock()
             }
             return
         }

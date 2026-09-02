@@ -13,7 +13,6 @@ Hover the notch to see your **5-hour session** and **weekly** utilization with r
 - Reset countdown next to each gauge, even when collapsed.
 - A small green dot beside the notch pulses while Claude Code is writing a transcript (FSEvents on `~/.claude/projects`); the expanded footer shows whether sessions are working, idle, or absent.
 - **Now Playing island**: album art on the left of the notch, equalizer bars on the right while music plays. Hover for title, artist, progress, and previous/play-pause/next. Works with anything that publishes to macOS Now Playing (YouTube Music as a Chrome app, Spotify, Apple Music, Safari…). Toggle off in the menu.
-- **Reminders**: your most urgent Apple Reminder sits beside the notch with a tick circle; hover for the next five, tick them off, or type a new one. Pick one list or all in the menu. Syncs with iPhone through iCloud like the Reminders app. Toggle off in the menu.
 - Polls once a minute, backs off on `429`.
 - Launch at login, show/hide notch island, show/hide % in the menu bar.
 
@@ -32,7 +31,7 @@ make run          # builds build/Islet.app and opens it
 make install      # copies it to /Applications
 ```
 
-The first launch asks for access to the **"Claude Code-credentials"** Keychain item. Click **Always Allow**; that is how the app reads (and refreshes) the token. It also asks for **Reminders** access (System Settings → Privacy & Security → Reminders) if the Reminders island is on.
+The first launch asks for access to the **"Claude Code-credentials"** Keychain item. Click **Always Allow**; that is how the app reads (and refreshes) the token.
 
 `make icon` regenerates `Resources/AppIcon.icns` from `Scripts/make-icon.swift`.
 
@@ -83,7 +82,6 @@ MIT
 - 접힌 상태에서도 게이지 옆에 리셋까지 남은 시간 표시.
 - Claude Code가 대화 기록을 쓰는 동안 노치 옆 초록 점이 맥박처럼 뜁니다(`~/.claude/projects` 파일 이벤트). 펼치면 세션이 작업 중인지, 대기 중인지, 없는지 하단에 표시.
 - **Now Playing 아일랜드**: 음악이 재생되면 노치 왼쪽에 앨범아트, 오른쪽에 이퀄라이저 바가 뜹니다. 펼치면 제목·아티스트·진행바·이전/재생·정지/다음 버튼. macOS Now Playing에 올라오는 앱은 전부 지원(YouTube Music 크롬 앱, Spotify, Apple Music, Safari 등). 메뉴에서 끌 수 있습니다.
-- **미리 알림**: 가장 급한 Apple 미리 알림 하나가 노치 옆에 체크 원과 함께 뜹니다. 펼치면 다음 5개, 완료 체크, 새 항목 입력. 메뉴에서 목록 하나 또는 전체 선택. iCloud로 아이폰과 동기화됩니다. 메뉴에서 끌 수 있습니다.
 - 1분마다 갱신, `429`면 대기.
 - 로그인 시 실행, 노치 표시 켜고 끄기, 메뉴바 % 표시 켜고 끄기.
 
@@ -95,7 +93,7 @@ cd islet
 make run
 ```
 
-처음 실행하면 "Claude Code-credentials" 키체인 접근을 묻습니다. **항상 허용**을 누르세요. 미리 알림 접근 권한도 묻습니다(시스템 설정 → 개인정보 보호 및 보안 → 미리 알림).
+처음 실행하면 "Claude Code-credentials" 키체인 접근을 묻습니다. **항상 허용**을 누르세요.
 
 ### 문제 해결
 
