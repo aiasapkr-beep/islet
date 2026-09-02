@@ -54,6 +54,7 @@ Environment flags for development:
 | `ISLET_MOCK_USAGE=1` | Mock only the usage numbers; activity pulse and Now Playing stay real. |
 | `ISLET_ADAPTER_DIR` | Directory holding `mediaremote-adapter.pl` + `MediaRemoteAdapter.framework` when running the bare binary. |
 | `ISLET_EXPANDED=1` | Start with the island expanded (for screenshots). |
+| `ISLET_SNAPSHOT=/path/out.png` | Render the island to a trimmed PNG and quit. `make shots` regenerates `docs/*.png`. |
 
 ## Troubleshooting
 

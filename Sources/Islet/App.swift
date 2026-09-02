@@ -59,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.start()
         ActivityMonitor.shared.start()
         rebuildPanel()
+        snapshotIfRequested()
 
         observers.append(NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
@@ -74,6 +75,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             observers.append(music)
         }
+    }
+
+    /// ISLET_SNAPSHOT=/path/out.png renders the island to a trimmed PNG and quits (for README shots).
+    private func snapshotIfRequested() {
+        guard let path = ProcessInfo.processInfo.environment["ISLET_SNAPSHOT"] else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            defer { NSApp.terminate(nil) }
+            guard let view = self?.panel?.contentView,
+                  let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+            view.cacheDisplay(in: view.bounds, to: rep)
+            guard let trimmed = Self.trimTransparent(rep, padding: 24),
+                  let png = trimmed.representation(using: .png, properties: [:]) else { return }
+            try? png.write(to: URL(fileURLWithPath: path))
+            Log.info("snapshot written to \(path)")
+        }
+    }
+
+    private static func trimTransparent(_ rep: NSBitmapImageRep, padding: Int) -> NSBitmapImageRep? {
+        let w = rep.pixelsWide, h = rep.pixelsHigh
+        var minX = w, minY = h, maxX = -1, maxY = -1
+        for y in 0..<h {
+            for x in 0..<w where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.02 {
+                minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= minX else { return nil }
+        let x0 = max(0, minX - padding), y0 = max(0, minY - padding)
+        let x1 = min(w - 1, maxX + padding), y1 = min(h - 1, maxY + padding)
+        let cw = x1 - x0 + 1, ch = y1 - y0 + 1
+        guard let out = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: cw, pixelsHigh: ch, bitsPerSample: 8,
+                                         samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: out)
+        // Bitmap rows are top-down; NSRect drawing is bottom-up, so flip the source rect.
+        let src = NSRect(x: x0, y: h - y1 - 1, width: cw, height: ch)
+        NSImage(cgImage: rep.cgImage!, size: NSSize(width: w, height: h))
+            .draw(in: NSRect(x: 0, y: 0, width: cw, height: ch), from: src, operation: .copy, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        return out
     }
 
     func applicationWillTerminate(_ notification: Notification) {

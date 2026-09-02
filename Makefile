@@ -1,4 +1,4 @@
-.PHONY: build app run icon clean
+.PHONY: build app run icon shots clean
 
 build:
 	swift build -c release
@@ -17,6 +17,10 @@ install: app
 
 icon:
 	swift Scripts/make-icon.swift
+
+shots: build
+	ISLET_MOCK=1 ISLET_SNAPSHOT=$(CURDIR)/docs/collapsed.png .build/release/Islet
+	ISLET_MOCK=1 ISLET_EXPANDED=1 ISLET_SNAPSHOT=$(CURDIR)/docs/expanded.png .build/release/Islet
 
 clean:
 	rm -rf .build build
