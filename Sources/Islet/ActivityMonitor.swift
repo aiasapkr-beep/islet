@@ -17,6 +17,7 @@ final class ActivityMonitor: ObservableObject {
     var activeWindow: TimeInterval = 20
 
     private var stream: FSEventStreamRef?
+    private let fsQueue = DispatchQueue(label: "kr.asapai.Islet.fsevents", qos: .utility)
     private var timer: Timer?
 
     private init() {}
@@ -36,7 +37,7 @@ final class ActivityMonitor: ObservableObject {
 
     func touch() {
         lastActivity = Date()
-        isActive = true
+        if !isActive { isActive = true }
     }
 
     // MARK: FSEvents on the transcript directory
@@ -71,7 +72,7 @@ final class ActivityMonitor: ObservableObject {
             Log.error("FSEventStreamCreate failed")
             return
         }
-        FSEventStreamSetDispatchQueue(s, .main)
+        FSEventStreamSetDispatchQueue(s, fsQueue)
         FSEventStreamStart(s)
         stream = s
     }

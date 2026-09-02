@@ -6,8 +6,16 @@ struct IsletApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @ObservedObject private var store = UsageStore.shared
 
+    /// MenuBarExtra writes its isInserted binding back on every configuration pass. Bound
+    /// straight to a @Published property that republishes even for unchanged values, this
+    /// forms an infinite SwiftUI update loop that pins the main thread. Guard on equality.
+    private var menuBarIconInserted: Binding<Bool> {
+        Binding(get: { store.showMenuBarIcon },
+                set: { new in if new != store.showMenuBarIcon { store.showMenuBarIcon = new } })
+    }
+
     var body: some Scene {
-        MenuBarExtra(isInserted: $store.showMenuBarIcon) {
+        MenuBarExtra(isInserted: menuBarIconInserted) {
             IsletMenu()
         } label: {
             HStack(spacing: 4) {
@@ -89,13 +97,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let delay = Double(ProcessInfo.processInfo.environment["ISLET_SNAPSHOT_DELAY"] ?? "1.5") ?? 1.5
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             defer { NSApp.terminate(nil) }
-            guard let view = self?.panel?.contentView,
-                  let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
-            view.cacheDisplay(in: view.bounds, to: rep)
-            guard let trimmed = Self.trimTransparent(rep, padding: 24),
+            guard let win = self?.panel, win.isVisible else { Log.error("snapshot: no visible panel"); return }
+            let wid = CGWindowID(win.windowNumber)
+            guard let cg = CGWindowListCreateImage(.null, .optionIncludingWindow, wid,
+                                                   [.boundsIgnoreFraming, .bestResolution]) else {
+                Log.error("snapshot: CGWindowListCreateImage failed"); return
+            }
+            let rep = NSBitmapImageRep(cgImage: cg)
+            guard let trimmed = Self.trimTransparent(rep, padding: 24) ?? rep as NSBitmapImageRep?,
                   let png = trimmed.representation(using: .png, properties: [:]) else { return }
             try? png.write(to: URL(fileURLWithPath: path))
-            Log.info("snapshot written to \(path)")
+            Log.info("snapshot written to \(path) (\(rep.pixelsWide)x\(rep.pixelsHigh))")
         }
     }
 
