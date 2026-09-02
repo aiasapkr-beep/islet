@@ -10,6 +10,8 @@ Hover the notch to see your **5-hour session** and **weekly** utilization with r
 - Reads the same numbers that Claude Code's `/usage` shows (`api.anthropic.com/api/oauth/usage`).
 - No API key, no extra cost. It reuses the Claude Code login already on your Mac.
 - Auto-refreshes the OAuth token when it expires (same flow Claude Code uses) and writes it back so `claude` keeps working too. Can be turned off in the menu.
+- Reset countdown next to each gauge, even when collapsed.
+- A small green dot beside the notch pulses while Claude Code is writing a transcript (FSEvents on `~/.claude/projects`); the expanded footer shows whether sessions are working, idle, or absent.
 - Polls once a minute, backs off on `429`.
 - Launch at login, show/hide notch island, show/hide % in the menu bar.
 
@@ -51,7 +53,7 @@ Environment flags for development:
 - **Menu bar shows `!`** – open the menu to read the error. Most common: the token *and* its refresh token are expired. Run `claude` in Terminal and `/login` once; the app picks it up on the next poll.
 - **`Keychain error`** – you denied the Keychain prompt. Quit the app, open Keychain Access, find "Claude Code-credentials" → Access Control, and add NotchUsage, or just relaunch and click Always Allow.
 - **Rebuilt the app and the prompt is back** – ad-hoc signatures change with every build. Sign with your own Developer ID in `Scripts/build-app.sh` if that bothers you.
-- **Island overlaps a menu bar icon** – it extends 70pt on each side of the notch. Turn it off with "Show in Notch" and rely on the menu bar item, or shrink `sideWidth` in `NotchView.swift`.
+- **Island overlaps a menu bar icon** – it extends about 100pt on each side of the notch. Turn it off with "Show in Notch" and rely on the menu bar item, or shrink `sideWidth` in `NotchView.swift`.
 
 ## Privacy
 
@@ -69,6 +71,8 @@ MIT
 
 - Claude Code의 `/usage`와 같은 엔드포인트를 그대로 읽습니다. 별도 API 키나 추가 비용이 없습니다.
 - 맥에 이미 로그인된 Claude Code 자격증명(키체인)을 재사용하고, 만료되면 Claude Code와 같은 방식으로 토큰을 갱신해 다시 저장합니다. 메뉴에서 끌 수 있습니다.
+- 접힌 상태에서도 게이지 옆에 리셋까지 남은 시간 표시.
+- Claude Code가 대화 기록을 쓰는 동안 노치 옆 초록 점이 맥박처럼 뜁니다(`~/.claude/projects` 파일 이벤트). 펼치면 세션이 작업 중인지, 대기 중인지, 없는지 하단에 표시.
 - 1분마다 갱신, `429`면 대기.
 - 로그인 시 실행, 노치 표시 켜고 끄기, 메뉴바 % 표시 켜고 끄기.
 
@@ -86,4 +90,4 @@ make run
 
 - **메뉴바에 `!`** 메뉴를 열면 오류 메시지가 보입니다. 대개 토큰과 갱신 토큰이 모두 만료된 경우이므로 터미널에서 `claude`를 실행해 `/login`을 한 번 하면 됩니다.
 - **키체인 오류** 접근을 거부한 경우입니다. 앱을 다시 열고 항상 허용을 누르거나, 키체인 접근 앱에서 "Claude Code-credentials" 항목의 접근 제어에 NotchUsage를 추가하세요.
-- **메뉴바 아이콘과 겹침** 노치 양옆으로 70pt씩 뻗습니다. "Show in Notch"를 끄거나 `NotchView.swift`의 `sideWidth`를 줄이세요.
+- **메뉴바 아이콘과 겹침** 노치 양옆으로 100pt 정도씩 뻗습니다. "Show in Notch"를 끄거나 `NotchView.swift`의 `sideWidth`를 줄이세요.

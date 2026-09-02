@@ -46,6 +46,8 @@ final class UsageStore: ObservableObject {
                           sevenDay: UsageWindow(utilization: 71, resetsAt: Date().addingTimeInterval(3 * 86400 + 4 * 3600)),
                           sevenDayOpus: UsageWindow(utilization: 18, resetsAt: Date().addingTimeInterval(3 * 86400 + 4 * 3600)))
             plan = "max"; sourceName = "mock"; lastUpdated = Date()
+            ActivityMonitor.shared.activeWindow = 3600
+            ActivityMonitor.shared.touch()
             return
         }
         refresh()
