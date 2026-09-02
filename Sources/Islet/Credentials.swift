@@ -120,6 +120,8 @@ enum CredentialStore {
         // 1) /usr/bin/security: an Apple-signed tool already trusted for this item on most
         //    machines, so it reads the token without raising a per-app Keychain prompt.
         if let (data, account) = readViaSecurityCLI() {
+            do { return (try Credentials(data: data), .securityCLI(account)) }
+            catch { Log.error("securityCLI blob did not parse: \(error.localizedDescription)") }
         }
         // 2) Direct SecItem access. Correct everywhere, but the first read from a new app
         //    identity raises the "Islet wants to use ... Keychain" confirmation dialog.
@@ -205,6 +207,11 @@ enum CredentialStore {
     }
 
     private static func readKeychain() throws -> Data? {
+        // Never let this raise the "Islet wants to use your Keychain" confirmation dialog.
+        // Islet is a menu-bar-only app, so such dialogs do not come forward; one per launch
+        // would silently queue up and block the read. Fail fast instead and fall through.
+        SecKeychainSetUserInteractionAllowed(false)
+        defer { SecKeychainSetUserInteractionAllowed(true) }
         var q = baseQuery
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -218,6 +225,8 @@ enum CredentialStore {
     }
 
     private static func writeKeychain(_ data: Data) throws {
+        SecKeychainSetUserInteractionAllowed(false)
+        defer { SecKeychainSetUserInteractionAllowed(true) }
         let status = SecItemUpdate(baseQuery as CFDictionary,
                                    [kSecValueData as String: data] as CFDictionary)
         guard status == errSecSuccess else { throw CredentialError.keychain(status) }
