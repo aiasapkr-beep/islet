@@ -32,6 +32,7 @@ struct NotchUsageApp: App {
         Divider()
         Toggle("Show in Notch", isOn: $store.showNotch)
         Toggle("Show % in Menu Bar", isOn: $store.showMenuBarText)
+        Toggle("Now Playing Island", isOn: $store.showNowPlaying)
         Toggle("Auto-refresh Claude Token", isOn: $store.autoRefreshToken)
         Toggle("Launch at Login", isOn: $store.launchAtLogin)
         Divider()
@@ -66,6 +67,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Show/hide when the setting flips.
         let cancellable = store.$showNotch.receive(on: RunLoop.main).sink { [weak self] _ in self?.rebuildPanel() }
         observers.append(cancellable)
+
+        if !UsageStore.mock {
+            let music = store.$showNowPlaying.removeDuplicates().receive(on: RunLoop.main).sink { on in
+                if on { NowPlayingMonitor.shared.start() } else { NowPlayingMonitor.shared.stop() }
+            }
+            observers.append(music)
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        NowPlayingMonitor.shared.stop()
     }
 
     private func rebuildPanel() {

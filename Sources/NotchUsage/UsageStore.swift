@@ -19,6 +19,7 @@ final class UsageStore: ObservableObject {
     @Published var showNotch: Bool { didSet { defaults.set(showNotch, forKey: "showNotch") } }
     @Published var autoRefreshToken: Bool { didSet { defaults.set(autoRefreshToken, forKey: "autoRefreshToken") } }
     @Published var showMenuBarText: Bool { didSet { defaults.set(showMenuBarText, forKey: "showMenuBarText") } }
+    @Published var showNowPlaying: Bool { didSet { defaults.set(showNowPlaying, forKey: "showNowPlaying") } }
     @Published var launchAtLogin: Bool {
         didSet { if launchAtLogin != oldValue { applyLaunchAtLogin() } }
     }
@@ -30,24 +31,30 @@ final class UsageStore: ObservableObject {
     private var inFlight = false
 
     private init() {
-        defaults.register(defaults: ["showNotch": true, "autoRefreshToken": true, "showMenuBarText": true])
+        defaults.register(defaults: ["showNotch": true, "autoRefreshToken": true, "showMenuBarText": true, "showNowPlaying": true])
         showNotch = defaults.bool(forKey: "showNotch")
         autoRefreshToken = defaults.bool(forKey: "autoRefreshToken")
         showMenuBarText = defaults.bool(forKey: "showMenuBarText")
+        showNowPlaying = defaults.bool(forKey: "showNowPlaying")
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
     /// NOTCHUSAGE_MOCK=1 shows sample data without touching the Keychain or network (for screenshots/dev).
     static let mock = ProcessInfo.processInfo.environment["NOTCHUSAGE_MOCK"] == "1"
+    /// NOTCHUSAGE_MOCK_USAGE=1 mocks only the usage numbers; activity and music stay real.
+    static let mockUsageOnly = ProcessInfo.processInfo.environment["NOTCHUSAGE_MOCK_USAGE"] == "1"
 
     func start() {
-        if Self.mock {
+        if Self.mock || Self.mockUsageOnly {
             usage = Usage(fiveHour: UsageWindow(utilization: 42, resetsAt: Date().addingTimeInterval(2 * 3600 + 13 * 60)),
                           sevenDay: UsageWindow(utilization: 71, resetsAt: Date().addingTimeInterval(3 * 86400 + 4 * 3600)),
                           sevenDayOpus: UsageWindow(utilization: 18, resetsAt: Date().addingTimeInterval(3 * 86400 + 4 * 3600)))
             plan = "max"; sourceName = "mock"; lastUpdated = Date()
-            ActivityMonitor.shared.activeWindow = 3600
-            ActivityMonitor.shared.touch()
+            if Self.mock {
+                ActivityMonitor.shared.activeWindow = 3600
+                ActivityMonitor.shared.touch()
+                NowPlayingMonitor.shared.installMock()
+            }
             return
         }
         refresh()
@@ -82,7 +89,7 @@ final class UsageStore: ObservableObject {
         defer { inFlight = false; isLoading = false }
 
         do {
-            var (creds, source) = try CredentialStore.load()
+            var (creds, source) = try await Task.detached(priority: .userInitiated) { try CredentialStore.load() }.value
             plan = creds.subscriptionType
             sourceName = source.description
             var refreshed = false
@@ -121,7 +128,7 @@ final class UsageStore: ObservableObject {
         guard autoRefreshToken else { throw StoreError.tokenExpired }
         Log.info("refreshing token…")
         let fresh = try await OAuth.refresh(creds)
-        try CredentialStore.save(fresh, to: source)
+        try await Task.detached(priority: .userInitiated) { try CredentialStore.save(fresh, to: source) }.value
         Log.info("token refreshed and saved to \(source)")
         return fresh
     }

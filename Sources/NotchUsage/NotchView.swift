@@ -5,14 +5,16 @@ import SwiftUI
 struct NotchView: View {
     @EnvironmentObject var store: UsageStore
     @ObservedObject private var activity = ActivityMonitor.shared
+    @ObservedObject private var music = NowPlayingMonitor.shared
     let geometry: NotchGeometry
 
     @State private var hovering = ProcessInfo.processInfo.environment["NOTCHUSAGE_EXPANDED"] == "1"
     @State private var collapseTask: Task<Void, Never>?
 
-    private let sideWidth: CGFloat = 104
+    private let sideWidth: CGFloat = 88     // gauge
+    private let stripWidth: CGFloat = 44    // island strip between gauge and notch
     private let expandedWidth: CGFloat = 440
-    private var collapsedWidth: CGFloat { geometry.notchWidth + sideWidth * 2 }
+    private var collapsedWidth: CGFloat { geometry.notchWidth + (sideWidth + stripWidth) * 2 }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,14 +62,39 @@ struct NotchView: View {
         return HStack(spacing: 0) {
             MiniGauge(label: "5H", window: store.usage?.fiveHour, error: failed)
                 .frame(width: sideWidth)
-            Spacer()
-            ActivityDot(active: activity.isActive)
-                .padding(.trailing, 6)
-            Spacer().frame(width: geometry.notchWidth)
-            Spacer()
+            leftStrip
+                .frame(width: stripWidth, alignment: .trailing)
+            Spacer(minLength: geometry.notchWidth)
+            rightStrip
+                .frame(width: stripWidth, alignment: .leading)
             MiniGauge(label: "7D", window: store.usage?.sevenDay, error: failed)
                 .frame(width: sideWidth)
         }
+    }
+
+    /// Claude activity pulse + album art, hugging the left edge of the notch.
+    private var leftStrip: some View {
+        HStack(spacing: 6) {
+            ActivityDot(active: activity.isActive)
+            if let m = music.current {
+                Artwork(image: m.artwork, size: 20, radius: 5)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .padding(.trailing, 6)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: music.current?.itemID)
+    }
+
+    /// Equalizer bars on the right edge of the notch while something is playing.
+    private var rightStrip: some View {
+        Group {
+            if let m = music.current {
+                EqualizerBars(playing: m.playing)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.leading, 6)
+        .animation(.easeOut(duration: 0.3), value: music.current != nil)
     }
 
     // MARK: Expanded detail
@@ -87,6 +114,10 @@ struct NotchView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(Color(red: 1, green: 0.62, blue: 0.04))
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            if let m = music.current {
+                Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1)
+                NowPlayingRow(item: m, monitor: music)
             }
             footer
         }
@@ -166,6 +197,126 @@ struct MiniGauge: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+struct Artwork: View {
+    let image: NSImage?
+    let size: CGFloat
+    let radius: CGFloat
+
+    var body: some View {
+        Group {
+            if let img = image {
+                Image(nsImage: img).resizable().scaledToFill()
+            } else {
+                ZStack {
+                    Color.white.opacity(0.12)
+                    Image(systemName: "music.note")
+                        .font(.system(size: size * 0.45, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+    }
+}
+
+/// Five bars that dance while music plays (procedural — macOS gives us no audio levels).
+struct EqualizerBars: View {
+    let playing: Bool
+    var bars = 5
+    var height: CGFloat = 16
+    var color: Color = .white
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !playing)) { ctx in
+            let t = ctx.date.timeIntervalSinceReferenceDate
+            HStack(alignment: .bottom, spacing: 2) {
+                ForEach(0..<bars, id: \.self) { i in
+                    Capsule()
+                        .fill(color)
+                        .frame(width: 3, height: height * (playing ? level(i, t) : 0.16))
+                }
+            }
+            .frame(height: height, alignment: .bottom)
+            .animation(.easeOut(duration: 0.25), value: playing)
+        }
+    }
+
+    private func level(_ i: Int, _ t: Double) -> CGFloat {
+        let freqs: [Double] = [2.3, 3.1, 2.7, 3.6, 2.0, 3.3, 2.5]
+        let f = freqs[i % freqs.count]
+        let p = Double(i) * 1.7
+        let a = sin(t * f + p)
+        let b = sin(t * f * 0.37 + p * 2.1)
+        let v = abs(a * 0.7 + b * 0.3)
+        return CGFloat(0.16 + 0.84 * v)
+    }
+}
+
+struct NowPlayingRow: View {
+    let item: NowPlaying
+    @ObservedObject var monitor: NowPlayingMonitor
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Artwork(image: item.artwork, size: 40, radius: 8)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.title)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(item.artist.isEmpty ? "Now Playing" : item.artist)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .lineLimit(1)
+                progress
+            }
+            Spacer(minLength: 8)
+            HStack(spacing: 14) {
+                control("backward.fill") { monitor.send(.previousTrack) }
+                control(item.playing ? "pause.fill" : "play.fill", size: 15) { monitor.send(.togglePlayPause) }
+                control("forward.fill") { monitor.send(.nextTrack) }
+            }
+        }
+    }
+
+    private var progress: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            let now = item.elapsedNow(at: ctx.date) ?? 0
+            let total = item.duration ?? 0
+            HStack(spacing: 6) {
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.12))
+                        Capsule().fill(Color.white.opacity(0.75))
+                            .frame(width: total > 0 ? g.size.width * min(now / total, 1) : 0)
+                    }
+                }
+                .frame(height: 3)
+                Text("\(mmss(now))\(total > 0 ? " / " + mmss(total) : "")")
+                    .font(.system(size: 9.5)).monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+        }
+    }
+
+    private func control(_ symbol: String, size: CGFloat = 12, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func mmss(_ s: Double) -> String {
+        let v = max(0, Int(s))
+        return String(format: "%d:%02d", v / 60, v % 60)
     }
 }
 

@@ -12,6 +12,7 @@ Hover the notch to see your **5-hour session** and **weekly** utilization with r
 - Auto-refreshes the OAuth token when it expires (same flow Claude Code uses) and writes it back so `claude` keeps working too. Can be turned off in the menu.
 - Reset countdown next to each gauge, even when collapsed.
 - A small green dot beside the notch pulses while Claude Code is writing a transcript (FSEvents on `~/.claude/projects`); the expanded footer shows whether sessions are working, idle, or absent.
+- **Now Playing island**: album art on the left of the notch, equalizer bars on the right while music plays. Hover for title, artist, progress, and previous/play-pause/next. Works with anything that publishes to macOS Now Playing (YouTube Music as a Chrome app, Spotify, Apple Music, Safari…). Toggle off in the menu.
 - Polls once a minute, backs off on `429`.
 - Launch at login, show/hide notch island, show/hide % in the menu bar.
 
@@ -40,18 +41,25 @@ The first launch asks for access to the **"Claude Code-credentials"** Keychain i
 2. If the access token is expired, refreshes it with Claude Code's public OAuth client id and saves the new token back in the same format.
 3. Calls `GET /api/oauth/usage` with `anthropic-beta: oauth-2025-04-20` and renders `five_hour`, `seven_day`, and the per-model weekly windows when present.
 
+### Now Playing on macOS 15.4+
+
+Apple locked the private MediaRemote framework to entitled system binaries in 15.4. NotchUsage bundles [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) (BSD-3, vendored under `Vendor/`), which loads a small helper framework inside `/usr/bin/perl` and streams Now Playing JSON. The app reads that stream as a child process; the bars are procedural (macOS exposes no audio levels). If Apple breaks the adapter, music quietly disappears and usage keeps working.
+
 Environment flags for development:
 
 | Flag | Effect |
 |---|---|
 | `NOTCHUSAGE_DEBUG=1` | Echo logs to stderr (also visible in Console.app under subsystem `io.github.minsueh.NotchUsage`). |
-| `NOTCHUSAGE_MOCK=1` | Show sample data; no Keychain or network access. |
+| `NOTCHUSAGE_MOCK=1` | Show sample data (usage, activity, music); no Keychain or network access. |
+| `NOTCHUSAGE_MOCK_USAGE=1` | Mock only the usage numbers; activity pulse and Now Playing stay real. |
+| `NOTCHUSAGE_ADAPTER_DIR` | Directory holding `mediaremote-adapter.pl` + `MediaRemoteAdapter.framework` when running the bare binary. |
 | `NOTCHUSAGE_EXPANDED=1` | Start with the island expanded (for screenshots). |
 
 ## Troubleshooting
 
 - **Menu bar shows `!`** – open the menu to read the error. Most common: the token *and* its refresh token are expired. Run `claude` in Terminal and `/login` once; the app picks it up on the next poll.
 - **`Keychain error`** – you denied the Keychain prompt. Quit the app, open Keychain Access, find "Claude Code-credentials" → Access Control, and add NotchUsage, or just relaunch and click Always Allow.
+- **No music shows up** – make sure the player publishes to Now Playing (the macOS Control Center media widget shows it). Run `/usr/bin/perl Vendor/mediaremote-adapter/bin/mediaremote-adapter.pl "$PWD/Vendor/mediaremote-adapter/build/MediaRemoteAdapter.framework" get --no-artwork` to test the adapter directly.
 - **Rebuilt the app and the prompt is back** – ad-hoc signatures change with every build. Sign with your own Developer ID in `Scripts/build-app.sh` if that bothers you.
 - **Island overlaps a menu bar icon** – it extends about 100pt on each side of the notch. Turn it off with "Show in Notch" and rely on the menu bar item, or shrink `sideWidth` in `NotchView.swift`.
 
@@ -73,6 +81,7 @@ MIT
 - 맥에 이미 로그인된 Claude Code 자격증명(키체인)을 재사용하고, 만료되면 Claude Code와 같은 방식으로 토큰을 갱신해 다시 저장합니다. 메뉴에서 끌 수 있습니다.
 - 접힌 상태에서도 게이지 옆에 리셋까지 남은 시간 표시.
 - Claude Code가 대화 기록을 쓰는 동안 노치 옆 초록 점이 맥박처럼 뜁니다(`~/.claude/projects` 파일 이벤트). 펼치면 세션이 작업 중인지, 대기 중인지, 없는지 하단에 표시.
+- **Now Playing 아일랜드**: 음악이 재생되면 노치 왼쪽에 앨범아트, 오른쪽에 이퀄라이저 바가 뜹니다. 펼치면 제목·아티스트·진행바·이전/재생·정지/다음 버튼. macOS Now Playing에 올라오는 앱은 전부 지원(YouTube Music 크롬 앱, Spotify, Apple Music, Safari 등). 메뉴에서 끌 수 있습니다.
 - 1분마다 갱신, `429`면 대기.
 - 로그인 시 실행, 노치 표시 켜고 끄기, 메뉴바 % 표시 켜고 끄기.
 
