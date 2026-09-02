@@ -25,7 +25,7 @@ Hover the notch to see your **5-hour session** and **weekly** utilization with r
 ## Build & run
 
 ```bash
-git clone https://github.com/minsueh/notch-usage.git
+git clone https://github.com/aiasapkr-beep/notch-usage.git
 cd notch-usage
 make run          # builds build/NotchUsage.app and opens it
 make install      # copies it to /Applications
@@ -88,7 +88,7 @@ MIT
 ### 빌드
 
 ```bash
-git clone https://github.com/minsueh/notch-usage.git
+git clone https://github.com/aiasapkr-beep/notch-usage.git
 cd notch-usage
 make run
 ```

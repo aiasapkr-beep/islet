@@ -36,7 +36,7 @@ struct NotchUsageApp: App {
         Toggle("Auto-refresh Claude Token", isOn: $store.autoRefreshToken)
         Toggle("Launch at Login", isOn: $store.launchAtLogin)
         Divider()
-        Link("GitHub", destination: URL(string: "https://github.com/minsueh/notch-usage")!)
+        Link("GitHub", destination: URL(string: "https://github.com/aiasapkr-beep/notch-usage")!)
         Button("Quit NotchUsage") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
