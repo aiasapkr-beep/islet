@@ -62,16 +62,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         let store = UsageStore.shared
-        if ProcessInfo.processInfo.environment["ISLET_SELFTEST"] == "1" {
-            Task {
-                await store.refreshNow(force: true)
-                let line = store.usage.map { "SELFTEST usage 5h=\($0.fiveHour?.percentText ?? "-") 7d=\($0.sevenDay?.percentText ?? "-")" }
-                    ?? "SELFTEST no usage: \(store.errorMessage ?? "unknown")"
-                FileHandle.standardError.write(Data((line + "\n").utf8))
-                NSApp.terminate(nil)
-            }
-            return
-        }
         store.start()
         ActivityMonitor.shared.start()
         rebuildPanel()
@@ -96,7 +86,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// ISLET_SNAPSHOT=/path/out.png renders the island to a trimmed PNG and quits (for README shots).
     private func snapshotIfRequested() {
         guard let path = ProcessInfo.processInfo.environment["ISLET_SNAPSHOT"] else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+        let delay = Double(ProcessInfo.processInfo.environment["ISLET_SNAPSHOT_DELAY"] ?? "1.5") ?? 1.5
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             defer { NSApp.terminate(nil) }
             guard let view = self?.panel?.contentView,
                   let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }

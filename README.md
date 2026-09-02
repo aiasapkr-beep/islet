@@ -37,7 +37,7 @@ The first launch asks for access to the **"Claude Code-credentials"** Keychain i
 
 ## How it works
 
-1. Loads Claude Code's credentials from the login Keychain (service `Claude Code-credentials`), falling back to `~/.claude/.credentials.json` (or `$CLAUDE_CONFIG_DIR`).
+1. Loads Claude Code's credentials from the login Keychain (service `Claude Code-credentials`). It reads them through `/usr/bin/security` so it never raises a per-app Keychain permission dialog, falling back to direct Keychain access and then `~/.claude/.credentials.json` (or `$CLAUDE_CONFIG_DIR`).
 2. If the access token is expired, refreshes it with Claude Code's public OAuth client id and saves the new token back in the same format.
 3. Calls `GET /api/oauth/usage` with `anthropic-beta: oauth-2025-04-20` and renders `five_hour`, `seven_day`, and the per-model weekly windows when present.
 

@@ -3,6 +3,16 @@ import Foundation
 /// GET https://api.anthropic.com/api/oauth/usage — the same endpoint Claude Code's `/usage` uses.
 enum UsageAPI {
     static let endpoint = URL(string: "https://api.anthropic.com/api/oauth/usage")!
+
+    /// A dedicated session. URLSession.shared can wedge if it is first touched while the main
+    /// thread is blocked during launch, so we own our configuration and timeouts here.
+    static let session: URLSession = {
+        let cfg = URLSessionConfiguration.ephemeral
+        cfg.timeoutIntervalForRequest = 20
+        cfg.timeoutIntervalForResource = 30
+        cfg.waitsForConnectivity = false
+        return URLSession(configuration: cfg)
+    }()
     static let userAgent = "Islet/\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev") (macOS)"
 
     enum Failure: LocalizedError {
@@ -30,7 +40,7 @@ enum UsageAPI {
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         req.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         req.timeoutInterval = 20
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await session.data(for: req)
         let http = resp as? HTTPURLResponse
         switch http?.statusCode ?? 0 {
         case 200..<300: return try Usage(json: data)

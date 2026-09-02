@@ -59,12 +59,14 @@ struct Credentials {
 }
 
 enum CredentialSource: CustomStringConvertible {
-    case keychain
+    case keychain              // direct SecItem access (may prompt for permission)
+    case securityCLI(String)   // /usr/bin/security (account name), no per-app prompt
     case file(URL)
 
     var description: String {
         switch self {
         case .keychain: return "Keychain"
+        case .securityCLI: return "Keychain"
         case .file(let u): return u.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
         }
     }
@@ -96,14 +98,38 @@ enum CredentialStore {
         return dir.appendingPathComponent(".credentials.json")
     }
 
+    /// Async entry points run the blocking Keychain/subprocess work on a background queue,
+    /// so the main actor is never blocked (blocking it wedges Swift's concurrency executor).
+    static func loadAsync() async throws -> (Credentials, CredentialSource) {
+        try await withCheckedThrowingContinuation { cont in
+            DispatchQueue.global(qos: .userInitiated).async {
+                cont.resume(with: Result { try load() })
+            }
+        }
+    }
+
+    static func saveAsync(_ creds: Credentials, to source: CredentialSource) async throws {
+        try await withCheckedThrowingContinuation { cont in
+            DispatchQueue.global(qos: .userInitiated).async {
+                cont.resume(with: Result { try save(creds, to: source) })
+            }
+        }
+    }
+
     static func load() throws -> (Credentials, CredentialSource) {
+        // 1) /usr/bin/security: an Apple-signed tool already trusted for this item on most
+        //    machines, so it reads the token without raising a per-app Keychain prompt.
+        if let (data, account) = readViaSecurityCLI() {
+        }
+        // 2) Direct SecItem access. Correct everywhere, but the first read from a new app
+        //    identity raises the "Islet wants to use ... Keychain" confirmation dialog.
         var keychainError: Error?
         do {
             if let data = try readKeychain() {
                 return (try Credentials(data: data), .keychain)
             }
         } catch { keychainError = error }
-
+        // 3) The file Claude Code uses on non-macOS (or a custom CLAUDE_CONFIG_DIR).
         if let data = try? Data(contentsOf: fileURL) {
             return (try Credentials(data: data), .file(fileURL))
         }
@@ -114,8 +140,61 @@ enum CredentialStore {
         let data = try creds.data()
         switch source {
         case .keychain: try writeKeychain(data)
+        case .securityCLI(let account): try writeViaSecurityCLI(data, account: account)
         case .file(let url): try data.write(to: url, options: [.atomic])
         }
+    }
+
+    // MARK: /usr/bin/security
+
+    /// Runs `security` with stdout captured through a temp file. Using a file (not a Pipe)
+    /// means we never have to drain a pipe while blocking a thread, so this is safe to call
+    /// synchronously from the main actor without risking a pipe-buffer deadlock.
+    private static func runSecurity(_ args: [String]) -> (Int32, Data) {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        proc.arguments = args
+        let tmp = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("islet-sec-\(UUID().uuidString)")
+        FileManager.default.createFile(atPath: tmp.path, contents: nil)
+        guard let handle = try? FileHandle(forWritingTo: tmp) else { return (-1, Data()) }
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        proc.standardOutput = handle
+        proc.standardError = FileHandle.nullDevice
+        // Wait via terminationHandler + semaphore. waitUntilExit() deadlocks when called on
+        // the main thread, and Process's handler fires on its own queue, so this is safe there.
+        let done = DispatchSemaphore(value: 0)
+        proc.terminationHandler = { _ in done.signal() }
+        do { try proc.run() } catch { try? handle.close(); return (-1, Data()) }
+        done.wait()
+        try? handle.close()
+        let data = (try? Data(contentsOf: tmp)) ?? Data()
+        return (proc.terminationStatus, data)
+    }
+
+    /// Reads the raw JSON blob and the account name it is stored under, if the tool succeeds.
+    private static func readViaSecurityCLI() -> (Data, String)? {
+        let (code, data) = runSecurity(["find-generic-password", "-s", service, "-w"])
+        guard code == 0 else { return nil }
+        var blob = data
+        if blob.last == 0x0A { blob.removeLast() }
+        guard !blob.isEmpty else { return nil }
+        // The account is needed to update the same item in place later.
+        let (mcode, meta) = runSecurity(["find-generic-password", "-s", service, "-g"])
+        var account = NSUserName()
+        if mcode == 0, let text = String(data: meta, encoding: .utf8),
+           let range = text.range(of: "\"acct\"<blob>=\"") {
+            let rest = text[range.upperBound...]
+            if let end = rest.firstIndex(of: "\"") { account = String(rest[..<end]) }
+        }
+        return (blob, account)
+    }
+
+    private static func writeViaSecurityCLI(_ data: Data, account: String) throws {
+        // -U updates the existing item in place, preserving its access control.
+        guard let json = String(data: data, encoding: .utf8) else { throw CredentialError.malformed }
+        let (code, _) = runSecurity(["add-generic-password", "-U", "-s", service, "-a", account, "-w", json])
+        guard code == 0 else { throw CredentialError.keychain(errSecAuthFailed) }
     }
 
     // MARK: Keychain

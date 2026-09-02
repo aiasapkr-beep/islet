@@ -44,7 +44,7 @@ enum OAuth {
             req.setValue(UsageAPI.userAgent, forHTTPHeaderField: "User-Agent")
             req.timeoutInterval = 20
             do {
-                let (data, resp) = try await URLSession.shared.data(for: req)
+                let (data, resp) = try await UsageAPI.session.data(for: req)
                 let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
                 guard (200..<300).contains(code) else {
                     lastError = Failure.rejected(code, String(decoding: data.prefix(200), as: UTF8.self))

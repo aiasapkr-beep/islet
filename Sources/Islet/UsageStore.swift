@@ -67,7 +67,75 @@ final class UsageStore: ObservableObject {
     }
 
     func refresh(force: Bool = false) {
-        Task { await refreshNow(force: force) }
+        if inFlight { return }
+        if !force, let b = backoffUntil, b > Date() { return }
+        inFlight = true
+        isLoading = true
+        let allowRefresh = autoRefreshToken
+        // Run all Keychain + network work off the main actor. Results are published back
+        // through the GCD main queue (which the run loop always drains), never through a
+        // cooperative main-actor await — those don't reliably resume in this app's runloop.
+        Task.detached(priority: .userInitiated) { [weak self] in
+            await self?.performRefresh(force: force, allowRefresh: allowRefresh)
+        }
+    }
+
+    /// Convenience for callers that used to await the refresh; the work is fire-and-forget.
+    func refreshNow(force: Bool = false) async { refresh(force: force) }
+
+    private nonisolated func publish(_ block: @escaping @MainActor (UsageStore) -> Void) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            MainActor.assumeIsolated { block(self) }
+        }
+    }
+
+    private nonisolated func performRefresh(force: Bool, allowRefresh: Bool) async {
+        defer { publish { $0.inFlight = false; $0.isLoading = false } }
+        do {
+            var (creds, source) = try await CredentialStore.loadAsync()
+            publish { $0.plan = creds.subscriptionType; $0.sourceName = source.description }
+            var refreshed = false
+            Log.info("credentials from \(source), plan=\(creds.subscriptionType ?? "?"), expired=\(creds.isExpired), canRefresh=\(creds.canRefresh)")
+
+            if creds.isExpired {
+                creds = try await refreshAndSave(creds, source, allowRefresh: allowRefresh)
+                refreshed = true
+            }
+            let result: Usage
+            do {
+                result = try await UsageAPI.fetch(token: creds.accessToken)
+            } catch UsageAPI.Failure.unauthorized where !refreshed {
+                creds = try await refreshAndSave(creds, source, allowRefresh: allowRefresh)
+                result = try await UsageAPI.fetch(token: creds.accessToken)
+            } catch UsageAPI.Failure.rateLimited where !refreshed && creds.canRefresh && allowRefresh {
+                // The endpoint answers 429 (not 401) to stale tokens; one refresh usually clears it.
+                creds = try await refreshAndSave(creds, source, allowRefresh: allowRefresh)
+                result = try await UsageAPI.fetch(token: creds.accessToken)
+            }
+            Log.info("usage ok: 5h=\(result.fiveHour?.percentText ?? "-") 7d=\(result.sevenDay?.percentText ?? "-")")
+            publish { $0.usage = result; $0.lastUpdated = Date(); $0.backoffUntil = nil; $0.errorMessage = nil }
+        } catch UsageAPI.Failure.rateLimited(let retryAfter) {
+            let wait = min(max(retryAfter ?? 300, 60), 15 * 60)
+            Log.error("rate limited, retry-after=\(retryAfter ?? -1), waiting \(wait)s")
+            publish {
+                $0.backoffUntil = Date().addingTimeInterval(wait)
+                $0.errorMessage = UsageAPI.Failure.rateLimited(retryAfter: wait).errorDescription
+            }
+        } catch {
+            Log.error(error.localizedDescription)
+            publish { $0.errorMessage = error.localizedDescription }
+        }
+    }
+
+    private nonisolated func refreshAndSave(_ creds: Credentials, _ source: CredentialSource, allowRefresh: Bool) async throws -> Credentials {
+        guard allowRefresh else { throw StoreError.tokenExpired }
+        Log.info("refreshing token…")
+        let fresh = try await OAuth.refresh(creds)
+        do { try await CredentialStore.saveAsync(fresh, to: source) }
+        catch { Log.error("token saved in memory but not written back: \(error.localizedDescription)") }
+        Log.info("token refreshed and saved to \(source)")
+        return fresh
     }
 
     /// Short text for the menu bar item, e.g. "42% · 18%".
@@ -81,61 +149,6 @@ final class UsageStore: ObservableObject {
     var planText: String {
         guard let p = plan, !p.isEmpty else { return "Claude" }
         return "Claude " + p.prefix(1).uppercased() + p.dropFirst()
-    }
-
-    func refreshNow(force: Bool = false) async {
-        if inFlight { return }
-        if !force, let b = backoffUntil, b > Date() { return }
-        inFlight = true
-        isLoading = true
-        defer { inFlight = false; isLoading = false }
-
-        do {
-            Log.info("loading credentials…")
-            let t0 = Date()
-            var (creds, source) = try await Task.detached(priority: .userInitiated) { try CredentialStore.load() }.value
-            Log.info("credentials loaded in \(String(format: "%.1f", Date().timeIntervalSince(t0)))s")
-            plan = creds.subscriptionType
-            sourceName = source.description
-            var refreshed = false
-            Log.info("credentials from \(source), plan=\(creds.subscriptionType ?? "?"), expired=\(creds.isExpired), canRefresh=\(creds.canRefresh)")
-
-            if creds.isExpired {
-                creds = try await refreshCredentials(creds, source)
-                refreshed = true
-            }
-            do {
-                usage = try await UsageAPI.fetch(token: creds.accessToken)
-            } catch UsageAPI.Failure.unauthorized where !refreshed {
-                creds = try await refreshCredentials(creds, source)
-                usage = try await UsageAPI.fetch(token: creds.accessToken)
-            } catch UsageAPI.Failure.rateLimited where !refreshed && creds.canRefresh && autoRefreshToken {
-                // The endpoint answers 429 (not 401) to stale tokens; one refresh usually clears it.
-                creds = try await refreshCredentials(creds, source)
-                usage = try await UsageAPI.fetch(token: creds.accessToken)
-            }
-            lastUpdated = Date()
-            backoffUntil = nil
-            errorMessage = nil
-            Log.info("usage ok: 5h=\(usage?.fiveHour?.percentText ?? "-") 7d=\(usage?.sevenDay?.percentText ?? "-")")
-        } catch UsageAPI.Failure.rateLimited(let retryAfter) {
-            let wait = min(max(retryAfter ?? 300, 60), 15 * 60)
-            backoffUntil = Date().addingTimeInterval(wait)
-            errorMessage = UsageAPI.Failure.rateLimited(retryAfter: wait).errorDescription
-            Log.error("rate limited, retry-after=\(retryAfter ?? -1), waiting \(wait)s")
-        } catch {
-            errorMessage = error.localizedDescription
-            Log.error(error.localizedDescription)
-        }
-    }
-
-    private func refreshCredentials(_ creds: Credentials, _ source: CredentialSource) async throws -> Credentials {
-        guard autoRefreshToken else { throw StoreError.tokenExpired }
-        Log.info("refreshing token…")
-        let fresh = try await OAuth.refresh(creds)
-        try await Task.detached(priority: .userInitiated) { try CredentialStore.save(fresh, to: source) }.value
-        Log.info("token refreshed and saved to \(source)")
-        return fresh
     }
 
     private func applyLaunchAtLogin() {
